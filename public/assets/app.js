@@ -130,7 +130,13 @@ function applyResult(site, result) {
   }
 
   const reason = result.error
-    ? { timeout: '连接超时', unreachable: '无法连接', 'mixed-content': '需要 HTTPS' }[result.error] ?? '检测失败'
+    ? {
+        timeout: '连接超时',
+        unreachable: '无法连接',
+        'mixed-content': '需要 HTTPS',
+        'access-denied': 'Access 拒绝',
+        'access-token-missing': '缺少 Access 令牌',
+      }[result.error] ?? '检测失败'
     : `HTTP ${result.status}`;
 
   setPill(card, 'offline', '离线', reason);

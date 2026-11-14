@@ -29,5 +29,7 @@ export const LINKS = [
     desc: '大肥鱼',
     glyph: 'D',
     accent: '#35d6b8',
+    // 这个子域在 Cloudflare Access 后面，探测需要走服务令牌
+    access: true,
   },
 ];

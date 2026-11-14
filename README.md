@@ -34,9 +34,27 @@ wrangler.jsonc           Worker 配置
 - 前端每 60 秒请求一次同源的 `/api/status`（页面切到后台时暂停，切回来立即重测）。
 - Worker 在 Cloudflare 边缘并发请求两个子域，单次 6 秒超时。
 - **HTTP 状态码 < 400 → 绿色「在线」。**
-- **401 / 403 也算绿色**：服务活着，只是需要登录（Cloudflare Access 之类）。绿色时卡片左下角会显示延迟。
+- **401 / 403 也算绿色**：服务活着，只是需要登录。
 - **≥ 400 的其他状态（404、5xx）、超时、DNS 失败 → 红色「离线」。**
+- **Cloudflare Access 保护**：未授权时 Access 会在到达源站前先返回登录跳转。探测不跟随这个跳转，而是直接判为离线（「缺少 Access 令牌」或「Access 拒绝」），避免把登录页的 200 当成服务在线。要探测源站真实状态，按下面的服务令牌配置。
 - 状态接口本身不可用时，两张卡片显示红色「检测失败」，页脚提示接口异常，方便排查。
+
+## 受 Cloudflare Access 保护的子域（DSH）
+
+Access 会先于源站拦截请求，所以默认探测无法判断 DSH 是否真的在运行。给 Worker 配一个服务令牌就能穿过 Access：
+
+1. Zero Trust → **Access → Service authentication → Service tokens → Create service token**
+   - 名称：`status-probe`，期限按需
+   - 创建后复制 **Client ID** 和 **Client Secret**（Secret 只显示一次）
+2. Zero Trust → **Access → Applications** → 选中 `dsh.eggle0v0.org` 的应用 → **Policies**
+   - **Add a policy**：Action 选 **Service Auth**，Include 选 **Service Token** → `status-probe`
+   - 保存
+3. Worker → **Settings → Variables and Secrets**，添加：
+   - `CF_ACCESS_CLIENT_ID` = Client ID
+   - `CF_ACCESS_CLIENT_SECRET` = Client Secret（设为 Secret）
+4. 保存并重新部署后，探测会带着令牌请求源站：源站正常 → 绿色；源站或隧道挂了 → 502/1030 → 红色。
+
+`public/assets/sites.js` 里 DSH 条目的 `access: true` 就是“这个站点要带令牌探测”的标记。
 
 ## 换背景
 
