@@ -31,5 +31,7 @@ export const LINKS = [
     accent: '#35d6b8',
     // 这个子域在 Cloudflare Access 后面，探测需要走服务令牌
     access: true,
+    // DSH 前面还有一层 Caddy Basic Auth，需要带 remember Cookie 才能看到后端
+    probeCookie: true,
   },
 ];

@@ -56,6 +56,21 @@ Access 会先于源站拦截请求，所以默认探测无法判断 DSH 是否�
 
 `public/assets/sites.js` 里 DSH 条目的 `access: true` 就是“这个站点要带令牌探测”的标记。
 
+### DSH 前面的 Caddy Basic Auth
+
+实际链路是 `cloudflared → Caddy(Basic Auth) → DSH`。Caddy 会先返回 401，请求根本到不了 DSH，
+所以 DSH 停掉后状态仍可能显示在线。Caddyfile 里有一条 `dsh_remember` Cookie 可以绕过 Basic：
+带上它，Caddy 会直接转发，DSH 挂了就返回 502。
+
+1. 从 Caddyfile 复制 `dsh_remember=...` 这一整段；
+2. 写入 Worker：
+
+```bash
+npx wrangler@4.162.0 secret put DSH_PROBE_COOKIE --name eggle0v0-home
+```
+
+3. 保存后探测会带上 Cookie。如果没配，DSH 会显示红色「缺少探测 Cookie」，而不是误报在线。
+
 ## 换背景
 
 默认是 CSS 画的极光渐变，不依赖任何图片。想换成照片：

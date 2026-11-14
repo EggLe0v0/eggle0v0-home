@@ -136,6 +136,8 @@ function applyResult(site, result) {
         'mixed-content': '需要 HTTPS',
         'access-denied': 'Access 拒绝',
         'access-token-missing': '缺少 Access 令牌',
+        'probe-blocked': '探测被 Basic Auth 拦截',
+        'probe-cookie-missing': '缺少探测 Cookie',
       }[result.error] ?? '检测失败'
     : `HTTP ${result.status}`;
 

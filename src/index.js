@@ -33,6 +33,13 @@ async function probe(site, env) {
     headers['cf-access-client-secret'] = env.CF_ACCESS_CLIENT_SECRET;
   }
 
+  // DSH 前面有一层 Caddy 做 Basic Auth，不带凭据时请求会被 Caddy 拦住，
+  // 永远看不到后端死活。带上 Caddy 的 remember Cookie 可以让它直接转发。
+  const hasProbeCookie = Boolean(site.probeCookie && env?.DSH_PROBE_COOKIE);
+  if (hasProbeCookie) {
+    headers.cookie = env.DSH_PROBE_COOKIE;
+  }
+
   try {
     const response = await fetch(site.url, {
       method: 'GET',
@@ -53,6 +60,10 @@ async function probe(site, env) {
       (status === 401 || status === 403) &&
       (response.headers.has('cf-access-domain') || response.headers.has('cf-access-aud'));
 
+    // 被 Caddy 的 Basic Auth 拦住：请求根本没到 DSH，不能算在线。
+    const basicChallenge = /^Basic\b/i.test(response.headers.get('www-authenticate') || '');
+    const probeBlocked = Boolean(site.probeCookie) && basicChallenge;
+
     // 只要状态码，不需要页面内容
     if (response.body) {
       try {
@@ -62,13 +73,20 @@ async function probe(site, env) {
       }
     }
 
-    if (blockedByAccess || accessRejected) {
+    if (blockedByAccess || accessRejected || probeBlocked) {
+      let error = null;
+      if (blockedByAccess || accessRejected) {
+        error = hasAccessToken ? 'access-denied' : 'access-token-missing';
+      } else {
+        error = hasProbeCookie ? 'probe-blocked' : 'probe-cookie-missing';
+      }
+
       return {
         id: site.id,
         ok: false,
         status,
         ms: Date.now() - startedAt,
-        error: hasAccessToken ? 'access-denied' : 'access-token-missing',
+        error,
       };
     }
 
