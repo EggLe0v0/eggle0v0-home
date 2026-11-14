@@ -1,11 +1,12 @@
-import { LINKS } from '../../assets/sites.js';
+import { LINKS } from '../public/assets/sites.js';
 
 // 单次探测超时时间（毫秒）
 const TIMEOUT_MS = 6_000;
 
 /**
  * 探测一个子站点。
- * 判定规则很简单：HTTP 状态码 < 400 算在线，其余（含超时、DNS 失败）算离线。
+ * 判定规则：HTTP 状态码 < 400 算在线；401/403 说明服务活着、只是要登录，也算在线；
+ * 其余（404/5xx、超时、DNS 失败）算离线。
  */
 async function probe(site) {
   const startedAt = Date.now();
@@ -36,7 +37,7 @@ async function probe(site) {
 
     return {
       id: site.id,
-      ok: status > 0 && status < 400,
+      ok: status > 0 && (status < 400 || status === 401 || status === 403),
       status,
       ms: Date.now() - startedAt,
       error: null,
@@ -54,7 +55,7 @@ async function probe(site) {
   }
 }
 
-export async function onRequestGet() {
+async function handleStatus() {
   const checkedAt = new Date().toISOString();
   const results = await Promise.all(LINKS.map(probe));
 
@@ -65,3 +66,21 @@ export async function onRequestGet() {
     },
   });
 }
+
+export default {
+  async fetch(request, env) {
+    const { pathname } = new URL(request.url);
+
+    if (pathname === '/api/status') {
+      if (request.method !== 'GET') {
+        return new Response('Method Not Allowed', {
+          status: 405,
+          headers: { allow: 'GET' },
+        });
+      }
+      return handleStatus();
+    }
+
+    return env.ASSETS.fetch(request);
+  },
+};
