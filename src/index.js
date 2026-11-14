@@ -92,15 +92,25 @@ async function probe(site, env) {
     }
 
     // DSH 的 Host 白名单：不带 --trusted-host 启动时，公网 Host 会在 /api 上返回 403。
-    // 服务本身活着，但公网不可用，标记为「仅本地」，由前端显示黄灯。
-    if (site.probePath && status === 403) {
+    // 放行之后，普通 GET（非 WebSocket）访问这个路径会得到 404/401，都算正常在线。
+    if (site.probePath) {
+      if (status === 403) {
+        return {
+          id: site.id,
+          ok: false,
+          restricted: true,
+          status,
+          ms: Date.now() - startedAt,
+          error: 'restricted',
+        };
+      }
+
       return {
         id: site.id,
-        ok: false,
-        restricted: true,
+        ok: status > 0 && status < 500,
         status,
         ms: Date.now() - startedAt,
-        error: 'restricted',
+        error: null,
       };
     }
 
