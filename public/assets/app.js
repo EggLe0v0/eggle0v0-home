@@ -106,10 +106,11 @@ function setPill(card, state, label, title) {
   pill.title = title;
 }
 
-function setMeta(card, text, bad) {
+function setMeta(card, text, tone = null) {
   const meta = card.querySelector('.card__meta');
   meta.textContent = text;
-  meta.classList.toggle('is-bad', Boolean(bad));
+  meta.classList.toggle('is-bad', tone === 'bad');
+  meta.classList.toggle('is-warn', tone === 'warn');
 }
 
 function applyResult(site, result) {
@@ -118,14 +119,20 @@ function applyResult(site, result) {
 
   if (!result) {
     setPill(card, 'checking', '检测中', '正在检测');
-    setMeta(card, '—', false);
+    setMeta(card, '—');
+    return;
+  }
+
+  if (result.restricted) {
+    setPill(card, 'warn', '仅本地', '公网访问被 DSH 拒绝（HTTP 403）');
+    setMeta(card, '公网 403', 'warn');
     return;
   }
 
   if (result.ok) {
     const status = result.status || 200;
     setPill(card, 'online', '在线', `HTTP ${status} · ${result.ms} ms`);
-    setMeta(card, `${result.ms} ms`, false);
+    setMeta(card, `${result.ms} ms`);
     return;
   }
 
@@ -142,7 +149,7 @@ function applyResult(site, result) {
     : `HTTP ${result.status}`;
 
   setPill(card, 'offline', '离线', reason);
-  setMeta(card, reason, true);
+  setMeta(card, reason, 'bad');
 }
 
 function applyApiFailure(message) {
@@ -150,7 +157,7 @@ function applyApiFailure(message) {
     const card = cards.get(site.id);
     if (!card) continue;
     setPill(card, 'error', '检测失败', message);
-    setMeta(card, '接口不可用', true);
+    setMeta(card, '接口不可用', 'bad');
   }
   els.lastCheck.textContent = '状态接口不可用';
   els.mode.textContent = '接口异常';
@@ -160,10 +167,11 @@ function announce(results) {
   const changes = [];
   for (const site of LINKS) {
     const result = results.get(site.id);
-    const next = result?.ok ? 'online' : 'offline';
+    const next = result?.restricted ? 'restricted' : result?.ok ? 'online' : 'offline';
     if (previousStates.get(site.id) !== next) {
       previousStates.set(site.id, next);
-      changes.push(`${site.name} ${next === 'online' ? '在线' : '离线'}`);
+      const label = next === 'restricted' ? '仅本地' : next === 'online' ? '在线' : '离线';
+      changes.push(`${site.name} ${label}`);
     }
   }
   if (changes.length) {

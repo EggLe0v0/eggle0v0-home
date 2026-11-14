@@ -33,5 +33,7 @@ export const LINKS = [
     access: true,
     // DSH 前面还有一层 Caddy Basic Auth，需要带 remember Cookie 才能看到后端
     probeCookie: true,
+    // 不带 --trusted-host 启动时，这个路径会返回 403，用来判定「仅本地」
+    probePath: '/api/remote.mux',
   },
 ];

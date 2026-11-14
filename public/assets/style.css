@@ -13,6 +13,7 @@
   --faint: #71778c;
   --ok: #3ddc97;
   --bad: #ff6b81;
+  --warn: #f5b544;
   --idle: #7d8398;
   --accent: #7c8cff;
 
@@ -364,6 +365,18 @@ a {
   animation: blink 1.3s ease-in-out infinite;
 }
 
+.status[data-state="warn"] {
+  color: color-mix(in srgb, var(--warn) 78%, white);
+  border-color: color-mix(in srgb, var(--warn) 28%, transparent);
+  background: color-mix(in srgb, var(--warn) 10%, rgba(0, 0, 0, 0.35));
+}
+
+.status[data-state="warn"] .status__dot {
+  background: var(--warn);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 16%, transparent),
+    0 0 12px color-mix(in srgb, var(--warn) 65%, transparent);
+}
+
 .card__name {
   margin: 0;
   font-size: clamp(1.15rem, 1.7vw, 1.32rem);
@@ -407,6 +420,10 @@ a {
 
 .card__meta.is-bad {
   color: color-mix(in srgb, var(--bad) 78%, white);
+}
+
+.card__meta.is-warn {
+  color: color-mix(in srgb, var(--warn) 82%, white);
 }
 
 .card__go {

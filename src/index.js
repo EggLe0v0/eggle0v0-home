@@ -41,7 +41,8 @@ async function probe(site, env) {
   }
 
   try {
-    const response = await fetch(site.url, {
+    const target = site.probePath ? new URL(site.probePath, site.url).toString() : site.url;
+    const response = await fetch(target, {
       method: 'GET',
       // 不跟随跳转：Access 的登录跳转要单独识别，不能拿登录页当源站
       redirect: 'manual',
@@ -87,6 +88,19 @@ async function probe(site, env) {
         status,
         ms: Date.now() - startedAt,
         error,
+      };
+    }
+
+    // DSH 的 Host 白名单：不带 --trusted-host 启动时，公网 Host 会在 /api 上返回 403。
+    // 服务本身活着，但公网不可用，标记为「仅本地」，由前端显示黄灯。
+    if (site.probePath && status === 403) {
+      return {
+        id: site.id,
+        ok: false,
+        restricted: true,
+        status,
+        ms: Date.now() - startedAt,
+        error: 'restricted',
       };
     }
 
