@@ -47,6 +47,12 @@ async function probe(site, env) {
     const blockedByAccess =
       status >= 300 && status < 400 && location.includes('cloudflareaccess.com');
 
+    // Access 在 strict 模式下拒绝令牌时返回 401/403，并带有 cf-access-* 头；
+    // 源站自己的 401 不会有这些头，需要区分开，否则会误判为在线。
+    const accessRejected =
+      (status === 401 || status === 403) &&
+      (response.headers.has('cf-access-domain') || response.headers.has('cf-access-aud'));
+
     // 只要状态码，不需要页面内容
     if (response.body) {
       try {
@@ -56,7 +62,7 @@ async function probe(site, env) {
       }
     }
 
-    if (blockedByAccess) {
+    if (blockedByAccess || accessRejected) {
       return {
         id: site.id,
         ok: false,
